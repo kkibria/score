@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "score"
+version = "0.1.0"
+description = ""
+authors = ["Khan Kibria <khan.kibria@gmail.com>"]
+readme = "README.md"
+packages = [{include = "score", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+opentypesvg = "^1.1.5"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
