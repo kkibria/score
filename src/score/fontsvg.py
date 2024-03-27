@@ -5,10 +5,9 @@ from fontTools.pens.transformPen import TransformPen
 from opentypesvg.fonts2svg import SVGPen, viewbox_settings
 
 class FontSvg():
-    def __init__(self, fontPath:str, adjust_view_box_to_glyph:bool) -> None:
+    def __init__(self, fontPath:str) -> None:
         self.fontPath = fontPath
         self.svg_dict = {}
-        self.adjust_view_box_to_glyph = adjust_view_box_to_glyph
         pass
 
     def loadFont(self):
@@ -47,22 +46,34 @@ class FontSvg():
             if not len(d):
                 continue
 
-            self.svg_dict[gName] = d
+            viewbox = self.viewbox_settings(gName)
+            svgStr = (u"""<symbol id="{}" """
+                    u"""viewBox="{}">\n""".format(gName, viewbox))
+            self.svg_dict[gName] = svgStr, d
+            
+
         return 0
 
     def keys(self):
         return self.svg_dict.keys()
 
+    def viewbox_settings(self, name):
+        try:
+            head = ttLib.TTFont(self.fontPath, res_name_or_index=name)["head"]
+            # it looks like compared to viewbox in the head table
+            # the yMin and yMax are inverted
+            x = head.xMin
+            y = -head.yMax
+            width = head.xMax - head.xMin
+            height = head.yMax - head.yMin
+            return """{} {} {} {}""".format(x, y, width, height)
+        except KeyError:
+            upm = 1000
+            return """0 -{} {} {}""".format(upm, upm, upm)
+
     def get_svg(self, name, hex_color):
-        viewbox = viewbox_settings(
-            self.fontPath,
-            self.adjust_view_box_to_glyph
-        )
 
-        svgStr = (u"""<symbol id="{}" """
-                u"""viewBox="{}">\n""".format(name, viewbox))
-
-        d = self.svg_dict[name]
+        svgStr, d = self.svg_dict[name]
 
         hex_str = hex_color
         opc = ''
