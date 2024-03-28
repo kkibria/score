@@ -1,7 +1,7 @@
 from score.fontsvg import FontSvg
 
 v = None
-with open("C:/Users/Khan/Documents/python/verovio/fonts/Leland/Leland.otf", "rb") as f:
+with open("Leland.otf", "rb") as f:
     v = FontSvg(f)
     v.loadFont()
 
