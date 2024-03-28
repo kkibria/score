@@ -2,24 +2,15 @@ import subprocess
 import re
 from check_svg import v, k
 
-g='''
-<g fill="none" stroke="black" stroke-width="3" >
-<line x1="{0}" y1="1.5" x2="300" y2="1.5" />
-<line x1="1.5" y1="0" x2="1.5" y2="100" />
-</g>
-<g fill="red" stroke="none" >
-<rect x="0" y="0" width="3" height="3" />
-<rect x="297" y="0" width="3" height="3" />
-<rect x="0" y="97" width="3" height="3" />
-</g>
-<g font-size="14" font-family="Verdana" >
-<text x="10" y="20">(0,0)</text>
-<text x="240" y="20">(300,0)</text>
-<text x="10" y="90">(0,100)</text>
-</g>
-'''
+pt = lambda i,l,h,d: (i)*(h-l)/d+l
 
-def coord_g(x1, y1, x2, y2, w):
+def coord_g(x1, y1, x2, y2, w, xd, yd):
+    l = []
+    l.extend(draw_coord(x1, y1, x2, y2, w))
+    l.extend(draw_grid(x1, y1, x2, y2, xd, yd))
+    return l 
+
+def draw_coord(x1, y1, x2, y2, w):
     wh = w/2
     l = []
     l.append(f'<g fill="none" stroke="black" stroke-width="{w}" >')
@@ -36,25 +27,23 @@ def coord_g(x1, y1, x2, y2, w):
     l.append(f'<text x="{x2-60}" y="{y1+20}">({x2},{y1})</text>')
     l.append(f'<text x="{x1+10}" y="{y2-10}">({x1},{y2})</text>')
     l.append(f'</g>')
-    ls= "stroke:#000000;stroke-width:0.5px;stroke-dasharray:10, 10;stroke-opacity:1"
+    return l
+
+def draw_grid(x1, y1, x2, y2, xd, yd):
+    l = []
+    ls= 'stroke:#D3D3D3;stroke-width:0.5px;stroke-dasharray:10, 10;stroke-opacity:1'
     l.append(f'<g style="{ls}" >')
-    xd = 10
-    yd = 5
-    pt = lambda i,l,h,d: (i+0.5)*(h-l)/d+l
     for xm in range(xd+1):
         x = pt(xm,x1,x2,xd) 
         l.append(f'<line x1="{x}" y1="{y1}" x2="{x}" y2="{y2}" />')
     for ym in range(yd+1):
         y = pt(ym,y1,y2,yd) 
-        l.append(f'<line x1="{x1}" y1="{y}" x2="{x2}" y2="{y}" />')
+        l.append(f'<line x1="{x1}" y1="{y}" x2="{x2}" y2="{y}" />')           
     l.append(f'</g>')
+    return l 
 
-    l.append(v.get_svg('uniE0D3', '000000'))
-    l.append(f'<use href="#uniE0D3" x="{pt(0,x1,x2,xd)}" y="{pt(0,y1,y2,yd)}" style="opacity:1.0" />')
-
-    return "\n".join(l)            
-
-def form(g):
+# kinda kludgy approach requires hand editing the outcome 
+def templetize(g:str):
     ll = []
     for i in g.splitlines():
         l = i
@@ -70,7 +59,7 @@ def svgwrap(w, h, g):
 <svg version="1.1"
     viewBox="0 0 {} {}"
      xmlns="http://www.w3.org/2000/svg">
-  <desc>Example InitialCoords - SVG's initial coordinate system</desc>
+  <desc>shows all the symbols from font</desc>
     {}
 </svg>
 """
@@ -80,10 +69,59 @@ def str2file(fn, s):
     with open(fn, "w") as f:
         print(s, file=f)
     cmd = f'explorer {fn}'.split()
-    sts = subprocess.run(cmd)
+    # sts = subprocess.run(cmd)
 
-str2file('x15.svg', svgwrap(1003, 503, coord_g(0, 0, 1000, 500, 3)))
-# str2file('x12.svg', svgwrap(g))
+font = """
+<def>
+{}
+</def>
+<g transform="translate({}, {}) scale({}) ">
+ <use href="#{}" />
+</g>
+"""
 
+def draw(x, y, w, xd, yd, s):
+    return _draw(x, y, w, xd+1, yd, s)
+
+def _draw(x, y, w, xd, yd, s):
+    l = coord_g(0, 0, x, y, w, xd, yd)
+    px = 100
+    py = 100
+    ids = list(k)
+    pages = {}
+    total = (xd-1)*(yd-1)
+
+    for i in range(len(ids)):
+        xl = i % (xd-1)
+        _r = i // (xd-1)
+        yl = _r % (yd-1)
+        p = _r // (yd-1)
+
+        px = (x//xd)*(1+xl)
+        py = (y//yd)*(1+yl)
+
+        id = ids[i]
+        f = v.get(id)
+        if p not in pages:
+            pages[p] = []
+        pages[p].append(font.format(f, px, py, s, id))
+        pages[p].append(f'<g font-size="10" font-family="Verdana" >')
+        pages[p].append(f'<text x="{px}" y="{py+y//yd//2}">{id}</text>')
+        pages[p].append(f'</g>')
+
+    for i in pages:
+        _svg = svgwrap(x+w, y+w, "\n".join(l+pages[i]))
+        str2file(f'xp{i}.svg', _svg)
+
+    return (len(pages))
+
+pages = draw(1000, 500, 3, 10, 5, 0.02)
+
+# pdf = fpdf.FPDF(unit="pt", format=(1003, 503))
+# for i in range(pages):
+#     svgobj = fpdf.svg.SVGObject.from_file(f'xp{i}.svg')
+#     pdf.add_page()
+#     svgobj.draw_to_page(pdf)
+# pdf.output("my_file.pdf")
 
 

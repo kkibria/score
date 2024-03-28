@@ -9,6 +9,8 @@ packages = [{include = "score", from = "src"}]
 [tool.poetry.dependencies]
 python = "^3.10"
 opentypesvg = "^1.1.5"
+reportlab = "^4.1.0"
+svglib = "^1.5.1"
 
 
 [build-system]

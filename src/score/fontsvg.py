@@ -2,19 +2,20 @@ import sys
 
 from fontTools import ttLib
 from fontTools.pens.transformPen import TransformPen
-from opentypesvg.fonts2svg import SVGPen, viewbox_settings
+from opentypesvg.fonts2svg import SVGPen
 
 class FontSvg():
     def __init__(self, fontPath:str) -> None:
         self.fontPath = fontPath
         self.svg_dict = {}
-        pass
+        self.loadFont()
 
     def loadFont(self):
         self.svg_dict = {}
         # Load the fonts and collect their glyph sets
         try:
             font = ttLib.TTFont(self.fontPath)
+            self.set_extent(font)
             gSet = font.getGlyphSet()
             font.close()
 
@@ -34,7 +35,6 @@ class FontSvg():
                 file=sys.stdout)
             return 1
 
-
         # Generate the SVGs
         for gName in names:
             pen = SVGPen(gSet)
@@ -45,48 +45,35 @@ class FontSvg():
             # Skip glyphs with no contours
             if not len(d):
                 continue
-
-            viewbox = self.viewbox_settings(gName)
-            svgStr = (u"""<symbol id="{}" """
-                    u"""viewBox="{}">\n""".format(gName, viewbox))
-            self.svg_dict[gName] = svgStr, d
-            
+            self.svg_dict[gName] = d
 
         return 0
 
     def keys(self):
         return self.svg_dict.keys()
 
-    def viewbox_settings(self, name):
+    def extent(self):
+        return self.extent
+
+    def upm(self):
+        return self.upm
+
+    def set_extent(self, font):
         try:
-            head = ttLib.TTFont(self.fontPath, res_name_or_index=name)["head"]
-            # it looks like compared to viewbox in the head table
-            # the yMin and yMax are inverted
+            head = font["head"]
+            # svg y axis increases downwards
             x = head.xMin
             y = -head.yMax
             width = head.xMax - head.xMin
             height = head.yMax - head.yMin
-            return """{} {} {} {}""".format(x, y, width, height)
+            self.extent = x, y, width, height
+            self.upm = head.unitsPerEm
+
         except KeyError:
             upm = 1000
-            return """0 -{} {} {}""".format(upm, upm, upm)
+            self.upm = upm
+            self.extent = -upm, -upm, upm+upm, upm+upm
 
-    def get_svg(self, name, hex_color):
-
-        svgStr, d = self.svg_dict[name]
-
-        hex_str = hex_color
-        opc = ''
-        if len(hex_str) != 6:
-            opcHex = hex_str[6:]
-            hex_str = hex_str[:6]
-            if opcHex.lower() != 'ff':
-                opc = ' opacity="{:.2f}"'.format(int(opcHex, 16) / 255)
-
-        svgStr += u'\t<path{} fill="#{}" d="{}"/>\n'.format(
-            opc, hex_str, d)
-        svgStr += u'</symbol>'
-
-        # Skip svg that have no paths
-        if '<path' in svgStr:
-            return svgStr
+    def get(self, name):
+        d = f'<path d="{self.svg_dict[name]}" />'
+        return f'<g id="{name}">\n {d}\n</g>'
