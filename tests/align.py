@@ -69,7 +69,7 @@ def str2file(fn, s):
     with open(fn, "w") as f:
         print(s, file=f)
     cmd = f'explorer {fn}'.split()
-    # sts = subprocess.run(cmd)
+    sts = subprocess.run(cmd)
 
 font = """
 <def>
