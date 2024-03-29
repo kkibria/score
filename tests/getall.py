@@ -1,6 +1,6 @@
 from score.fontsvg import FontSvg
 
-font_path = "C:/Users/Khan/Documents/python/verovio/fonts/Leland/Leland.otf"
+font_path = "Leland.otf"
 v = None
 
 with open(font_path, "rb") as f:
@@ -11,9 +11,11 @@ def getall(fn):
     with open(fn, "w") as f:
         print(f'<!-- upm={v.upm} -->', file=f)
         print(f'<!-- extent={v.extent} -->', file=f)
+        print('<dev>', file=f)
         for i in k:
             print(f'<!-- {i} -->', file=f)
             print(v.get(i), file=f)
+        print('</dev>', file=f)
 
 getall("getall.svg")
 
